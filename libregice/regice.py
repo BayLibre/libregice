@@ -90,6 +90,333 @@ class RegiceClient:
         """
         raise NotImplementedError
 
+class RegiceObject:
+    """
+        A class to easily manipulate a register or a field
+
+        Each instance could represent a peripheral, a register or a field.
+        This implements many operators, to read the value of register or field,
+        or update them.
+    """
+    FORCE_READ = 1
+    FORCE_WRITE = 2
+
+    def __init__(self, svd, client, cache_flags):
+        self.__dict__['svd'] = svd
+        self.__dict__['client'] = client
+        self.__dict__['cached_value'] = None
+        self.__dict__['cache_flags'] = cache_flags
+
+    def __int__(self):
+        return self.read_cached()
+
+    def __add__(self, other):
+        return self.read_cached() + other
+
+    def __sub__(self, other):
+        return self.read_cached() - other
+
+    def __mul__(self, other):
+        return self.read_cached() * other
+
+    def __truediv__(self, other):
+        return self.read_cached() / other
+
+    def __mod__(self, other):
+        return self.read_cached() % other
+
+    def __divmod__(self, other):
+        return divmod(self.read_cached(), other)
+
+    def __pow__(self, other):
+        return pow(self.read_cached(), other)
+
+    def __lshift__(self, other):
+        return self.read_cached() << other
+
+    def __rshift__(self, other):
+        return self.read_cached() >> other
+
+    def __and__(self, other):
+        return self.read_cached() & other
+
+    def __xor__(self, other):
+        return self.read_cached() ^ other
+
+    def __or__(self, other):
+        return self.read_cached() | other
+
+    def __radd__(self, other):
+        return other + self.read_cached()
+
+    def __rsub__(self, other):
+        return other - self.read_cached()
+
+    def __rmul__(self, other):
+        return other * self.read_cached()
+
+    def __rtruediv__(self, other):
+        return other / self.read_cached()
+
+    def __rmod__(self, other):
+        return other % self.read_cached()
+
+    def __rdivmod__(self, other):
+        return divmod(other, self.read_cached())
+
+    def __rpow__(self, other):
+        return pow(other, self.read_cached())
+
+    def __rlshift__(self, other):
+        return other << self.read_cached()
+
+    def __rrshift__(self, other):
+        return other >> self.read_cached()
+
+    def __rand__(self, other):
+        return other & self.read_cached()
+
+    def __rxor__(self, other):
+        return other ^ self.read_cached()
+
+    def __ror__(self, other):
+        return other | self.read_cached()
+
+    def __invert__(self):
+        return ~self.read_cached()
+
+    def __lt__(self, other):
+        return self.read_cached() < other
+
+    def __le__(self, other):
+        return self.read_cached() <= other
+
+    def __eq__(self, other):
+        return self.read_cached() == other
+
+    def __ne__(self, other):
+        return self.read_cached() != other
+
+    def __ge__(self, other):
+        return self.read_cached() > other
+
+    def __gt__(self, other):
+        return self.read_cached() >= other
+
+    def _new_obj(self):
+        return self.__class__(self.svd, self.client, self.cache_flags)
+
+    def __iadd__(self, other):
+        new_obj = self._new_obj()
+        new_obj.write_cached(self.read_cached() + other)
+        return new_obj
+
+    def __isub__(self, other):
+        new_obj = self._new_obj()
+        new_obj.write_cached(self.read_cached() - other)
+        return new_obj
+
+    def __imul__(self, other):
+        new_obj = self._new_obj()
+        new_obj.write_cached(self.read_cached() * other)
+        return new_obj
+
+    def __itruediv__(self, other):
+        new_obj = self._new_obj()
+        new_obj.write_cached(int(self.read_cached() / other))
+        return new_obj
+
+    def __imod__(self, other):
+        new_obj = self._new_obj()
+        new_obj.write_cached(self.read_cached() % other)
+        return new_obj
+
+    def __iand__(self, other):
+        new_obj = self._new_obj()
+        new_obj.write_cached(self.read_cached() & other)
+        return new_obj
+
+    def __ior__(self, other):
+        new_obj = self._new_obj()
+        new_obj.write_cached(self.read_cached() | other)
+        return new_obj
+
+    def __ixor__(self, other):
+        new_obj = self._new_obj()
+        new_obj.write_cached(self.read_cached() ^ other)
+        return new_obj
+
+    def __ilshift__(self, other):
+        new_obj = self._new_obj()
+        new_obj.write_cached(self.read_cached() >> other)
+        return new_obj
+
+    def __irshift__(self, other):
+        new_obj = self._new_obj()
+        new_obj.write_cached(self.read_cached() << other)
+        return new_obj
+
+    def __ipow__(self, other):
+        new_obj = self._new_obj()
+        new_obj.write_cached(self.read_cached() ** other)
+        return new_obj
+
+    def __getattr__(self, attr):
+        return getattr(self.svd, attr)
+
+class RegiceField(RegiceObject):
+    """
+        A class to easily manipulate a field
+
+        Each instance could represent a field.
+        This implements many operators, to read the value of fields,
+        or update them.
+
+    """
+    def __init__(self, parent, svd, client, cache_flags):
+        super(RegiceField, self).__init__(svd, client, cache_flags)
+        self.parent = parent
+
+    def read(self):
+        """
+            Read the value of field
+
+            :return: The value of field
+        """
+        value = self.parent.read()
+        mask = (1 << self.bitWidth) - 1
+        return (value >> self.bitOffset) & mask
+
+    def write(self, value):
+        """
+            Write a value to field
+
+            This write the value to field.
+            This forces a write to the register.
+
+            :param value: The value to write
+        """
+        mask = ((1 << self.bitWidth) - 1) << self.bitOffset
+        cached_value = self.parent.read_cached() & ~mask
+        self.parent.write(cached_value | (value << self.bitOffset))
+
+    def read_cached(self):
+        """
+            Read the cached value of field
+
+            This returns the value cached by read().
+            If there is no value in the cache, call read().
+
+            :return: The value of field
+        """
+        value = self.parent.read_cached()
+        mask = (1 << self.bitWidth) - 1
+        return (value >> self.bitOffset) & mask
+
+    def write_cached(self, value):
+        """
+            Write the field value to register cached value
+
+            This updates the value of register cache with the value
+            of the field.
+
+            :param value: The value to write
+        """
+        cached_value = self.parent.read_cached()
+        mask = (self.bitWidth << self.bitOffset)
+        cached_value &= ~mask
+        self.parent.write_cached(cached_value | (value << self.bitOffset))
+
+class RegiceRegister(RegiceObject):
+    """
+        A class to easily manipulate a register
+
+        Each instance could represent a register.
+        This implements many operators, to read the value of registers,
+        or update them.
+    """
+    def __init__(self, svd, client, cache_flags):
+        super(RegiceRegister, self).__init__(svd, client, cache_flags)
+        for field_name in svd.fields:
+            field = svd.fields[field_name]
+            field_obj = RegiceField(self, field, client, cache_flags)
+            setattr(self, field_name, field_obj)
+
+    def read(self):
+        """
+            Read the value of register
+
+            Read the value in the register, cache it and return it.
+            :return: The value of register
+        """
+        self.cached_value = self.client.read(self.svd.size, self.svd.address())
+        return self.cached_value
+
+    def write(self, value=None):
+        """
+            Write a value to register
+
+            This write the value (if one is given), or the value of cache to
+            register.
+            The cache is updated after the write operation.
+
+            :param value: The value to write if not None
+        """
+        if value is None:
+            value = self.cached_value
+        self.client.write(self.svd.size, self.svd.address(), value)
+        self.read()
+
+    def read_cached(self):
+        """
+            Read the cached value of register
+
+            This returns the value cached by read().
+            If there is no value in the cache, call read().
+
+            :return: The value of register
+        """
+        if not self.cached_value or self.cache_flags & self.FORCE_READ:
+            self.read()
+        return self.cached_value
+
+    def write_cached(self, value):
+        """
+            Write a value to register cache
+
+            This write the value to the register cache.
+
+            :param value: The value to write
+        """
+        self.cached_value = value
+        if self.cache_flags & self.FORCE_WRITE:
+            self.write()
+
+class RegicePeripheral:
+    """
+        A class derived from RegiceObject, to manipulate a peripheral
+    """
+    def __init__(self, svd, client, cache_flags):
+        self.svd = svd
+        for register_name in svd.registers:
+            register = svd.registers[register_name]
+            register_obj = RegiceRegister(register, client, cache_flags)
+            setattr(self, register_name, register_obj)
+
+    def __getattr__(self, attr):
+        return getattr(self.svd, attr)
+
+class RegiceDevice:
+    """
+        A class derived from RegiceObject, which is used as root of all other
+        objects
+    """
+    def __init__(self, svd, client, cache_flags=0):
+        for peripheral_name in svd.peripherals:
+            peripheral = svd.peripherals[peripheral_name]
+            peripheral_obj = RegicePeripheral(peripheral, client, cache_flags)
+            setattr(self, peripheral_name, peripheral_obj)
+
 class Regice:
     """
         A class to manipulate memory, registers remotely

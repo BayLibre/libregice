@@ -27,7 +27,8 @@ import sys
 import unittest
 
 from libregice import Regice, RegiceClient, SVDNotLoaded, InvalidRegister
-from libregice import RegiceClientTest
+from libregice import RegiceClientTest, RegiceDevice, RegiceRegister
+from svd import SVD
 
 class TestRegiceClientTest(unittest.TestCase):
     @classmethod
@@ -150,6 +151,124 @@ class TestRegice(unittest.TestCase):
     def test_get_base_address(self):
         address = self.regice.get_base_address('TEST1')
         self.assertEqual(address, 0x00001234)
+
+class TestRegiceObject(unittest.TestCase):
+    @classmethod
+    def setUpClass(self):
+        svd = SVD('test.svd')
+        svd.parse()
+        self.client = RegiceClientTest()
+        self.dev = RegiceDevice(svd, self.client, RegiceRegister.FORCE_READ)
+        self.memory = self.client.memory
+
+    def setUp(self):
+        self.client.memory_restore()
+
+    def test_peripheral(self):
+        self.assertTrue(hasattr(self.dev, 'TEST1'))
+        self.assertTrue(hasattr(self.dev, 'TEST2'))
+        self.assertEqual(self.dev.TEST1.baseAddress, 0x00001234)
+
+    def test_register(self):
+        self.assertTrue(hasattr(self.dev.TEST1, 'TESTA'))
+        self.assertTrue(hasattr(self.dev.TEST1, 'TESTB'))
+        self.assertEqual(self.dev.TEST1.TESTA.addressOffset, 0)
+
+    def test_field(self):
+        self.assertTrue(hasattr(self.dev.TEST1.TESTA, 'A1'))
+        self.assertTrue(hasattr(self.dev.TEST1.TESTA, 'A2'))
+
+    def test_register_to_int(self):
+        reg = self.dev.TEST1.TESTA
+        address = reg.address()
+        self.assertEqual(int(reg), self.memory[address])
+
+    def test_register_write(self):
+        reg = self.dev.TEST1.TESTA
+        address = reg.address()
+
+        reg.write(0)
+        self.assertEqual(self.memory[address], 0)
+
+        reg += 1
+        reg.write()
+        self.assertEqual(self.memory[address], 1)
+
+    def test_register_numeric_op(self):
+        reg = self.dev.TEST1.TESTA
+        address = reg.address()
+        self.assertEqual(reg + 1, self.memory[address] + 1)
+        self.assertEqual(reg - 1, self.memory[address] - 1)
+        self.assertEqual(reg * 2, self.memory[address] * 2)
+        self.assertEqual(reg / 2, self.memory[address] / 2)
+        self.assertEqual(reg % 2, self.memory[address] % 2)
+        self.assertEqual(divmod(reg, 2), divmod(self.memory[address], 2))
+        self.assertEqual(reg ** 2, self.memory[address] ** 2)
+        self.assertEqual(reg << 1, self.memory[address] << 1)
+        self.assertEqual(reg >> 1, self.memory[address] >> 1)
+        self.assertEqual(reg & 1, self.memory[address] & 1)
+        self.assertEqual(reg ^ 1, self.memory[address] ^ 1)
+        self.assertEqual(reg | 1, self.memory[address] | 1)
+
+        self.assertEqual(1 + reg, 1 + self.memory[address])
+        self.assertEqual(1 - reg, 1 - self.memory[address])
+        self.assertEqual(2 * reg, 2 * self.memory[address])
+        self.assertEqual(2 / reg, 2 / self.memory[address])
+        self.assertEqual(2 % reg, 2 % self.memory[address])
+        self.assertEqual(divmod(2, reg), divmod(2, self.memory[address]))
+        self.assertEqual(2 ** reg, 2 ** self.memory[address])
+        self.assertEqual(1 << reg, 1 << self.memory[address])
+        self.assertEqual(1 >> reg, 1 >> self.memory[address])
+        self.assertEqual(1 & reg, 1 & self.memory[address])
+        self.assertEqual(1 ^ reg, 1 ^ self.memory[address])
+        self.assertEqual(1 | reg, 1 | self.memory[address])
+
+        self.assertEqual(not reg, not self.memory[address])
+        self.assertEqual(1 < reg, 1 < self.memory[address])
+        self.assertEqual(1 <= reg, 1 <= self.memory[address])
+        self.assertEqual(1 > reg, 1 > self.memory[address])
+        self.assertEqual(1 >= reg, 1 >= self.memory[address])
+        self.assertEqual(1 == reg, 1 == self.memory[address])
+        self.assertEqual(1 != reg, 1 != self.memory[address])
+        self.assertEqual(~reg, ~self.memory[address])
+
+        reg += 1
+        self.assertTrue(hasattr(reg, 'cached_value'))
+        reg -= 1
+        self.assertTrue(hasattr(reg, 'cached_value'))
+        reg *= 1
+        self.assertTrue(hasattr(reg, 'cached_value'))
+        reg /= 1
+        self.assertTrue(hasattr(reg, 'cached_value'))
+        reg %= 1
+        self.assertTrue(hasattr(reg, 'cached_value'))
+        reg &= 1
+        self.assertTrue(hasattr(reg, 'cached_value'))
+        reg |= 1
+        self.assertTrue(hasattr(reg, 'cached_value'))
+        reg ^= 1
+        self.assertTrue(hasattr(reg, 'cached_value'))
+        reg <<= 1
+        self.assertTrue(hasattr(reg, 'cached_value'))
+        reg >>= 1
+        self.assertTrue(hasattr(reg, 'cached_value'))
+        reg **= 1
+        self.assertTrue(hasattr(reg, 'cached_value'))
+
+    def test_field_read(self):
+        print(int(self.dev.TEST1.TESTA.A1))
+        self.assertTrue(self.dev.TEST1.TESTA.A1 == 0)
+        self.assertTrue(self.dev.TEST1.TESTA.A2 == 1)
+        self.assertTrue(self.dev.TEST1.TESTA.A3 == 3)
+
+    def test_field_write(self):
+        reg = self.dev.TEST1.TESTA
+        address = reg.address()
+        reg.A2.write(0)
+        self.assertEqual(self.memory[address], 3)
+        reg.A3.write(0)
+        self.assertEqual(self.memory[address], 0)
+
 
 if __name__ == '__main__':
     unittest.main()
