@@ -525,7 +525,7 @@ class Regice:
             :return: A list of fields
         """
         if svd is None:
-            svd = self.svd_get_field_list(peripheral, register)
+            svd = self.svd_get_register(None, peripheral, register)
         return svd.fields.keys()
 
     def svd_get_field(self, svd, peripheral, register, field):
