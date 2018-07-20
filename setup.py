@@ -40,4 +40,6 @@ setup(
         "Operating System :: GNU/Linux",
         "Programming Language :: Python :: 3.6",
     ],
+    install_requires=['pylink-square'],
+    dependency_links=['git+https://github.com/BayLibre/pylink.git#egg=pylink-square'],
 )
