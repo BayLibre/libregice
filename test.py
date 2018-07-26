@@ -201,6 +201,7 @@ class TestRegiceObject(unittest.TestCase):
         self.assertEqual(reg - 1, self.memory[address] - 1)
         self.assertEqual(reg * 2, self.memory[address] * 2)
         self.assertEqual(reg / 2, self.memory[address] / 2)
+        self.assertEqual(reg // 2, self.memory[address] // 2)
         self.assertEqual(reg % 2, self.memory[address] % 2)
         self.assertEqual(divmod(reg, 2), divmod(self.memory[address], 2))
         self.assertEqual(reg ** 2, self.memory[address] ** 2)
@@ -239,6 +240,8 @@ class TestRegiceObject(unittest.TestCase):
         reg *= 1
         self.assertTrue(hasattr(reg, 'cached_value'))
         reg /= 1
+        self.assertTrue(hasattr(reg, 'cached_value'))
+        reg //= 1
         self.assertTrue(hasattr(reg, 'cached_value'))
         reg %= 1
         self.assertTrue(hasattr(reg, 'cached_value'))

@@ -122,6 +122,9 @@ class RegiceObject:
     def __truediv__(self, other):
         return self.read_cached() / other
 
+    def __floordiv__(self, other):
+        return self.read_cached() // other
+
     def __mod__(self, other):
         return self.read_cached() % other
 
@@ -224,6 +227,11 @@ class RegiceObject:
     def __itruediv__(self, other):
         new_obj = self._new_obj()
         new_obj.write_cached(int(self.read_cached() / other))
+        return new_obj
+
+    def __ifloordiv__(self, other):
+        new_obj = self._new_obj()
+        new_obj.write_cached(int(self.read_cached() // other))
         return new_obj
 
     def __imod__(self, other):
