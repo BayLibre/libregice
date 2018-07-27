@@ -24,6 +24,7 @@
 # SOFTWARE.
 
 from svd import SVD
+from libregice.clock import ClockTree
 
 class InvalidField(Exception):
     """
@@ -424,6 +425,7 @@ class RegiceDevice:
             peripheral = svd.peripherals[peripheral_name]
             peripheral_obj = RegicePeripheral(peripheral, client, cache_flags)
             setattr(self, peripheral_name, peripheral_obj)
+        self.clocktree = ClockTree()
 
 class Regice:
     """
