@@ -284,7 +284,7 @@ def ext_enable(clk):
 def ext_disable(clk):
     return clk.en_field.write(0)
 
-class TestClock(unittest.TestCase):
+class ClockTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         svd = SVD('test.svd')
@@ -293,6 +293,11 @@ class TestClock(unittest.TestCase):
         self.dev = RegiceDevice(svd, self.client)
         self.memory = self.client.memory
 
+    @classmethod
+    def setUp(self):
+        self.client.memory_restore()
+
+class TestClock(ClockTestCase):
     def test_clock_add_to_tree(self):
         tree = ClockTree()
         self.assertEqual(tree.clocks, {})
@@ -330,15 +335,7 @@ class TestClock(unittest.TestCase):
         with self.assertRaises(InvalidFrequency):
             clk.get_freq()
 
-class TestGate(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
-        svd = SVD('test.svd')
-        svd.parse()
-        self.client = RegiceClientTest()
-        self.dev = RegiceDevice(svd, self.client)
-        self.memory = self.client.memory
-
+class TestGate(ClockTestCase):
     def test_enabled(self):
         field = self.dev.TEST1.TESTA.A1
         clock = Gate(name='gate', device=self.dev, en_field=field)
@@ -358,15 +355,7 @@ class TestGate(unittest.TestCase):
         clock = Gate(device=self.dev, en_field=self.dev.TEST1.TESTA.A1)
         self.assertTrue(clock.build())
 
-class TestFixedClock(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
-        svd = SVD('test.svd')
-        svd.parse()
-        self.client = RegiceClientTest()
-        self.dev = RegiceDevice(svd, self.client)
-        self.memory = self.client.memory
-
+class TestFixedClock(ClockTestCase):
     def test_fixed_clock(self):
         clock = FixedClock(freq=123456)
         self.assertEqual(clock.freq, 123456)
@@ -385,14 +374,10 @@ class TestFixedClock(unittest.TestCase):
 def ext_get_mux(self):
     return 0
 
-class TestMux(unittest.TestCase):
+class TestMux(ClockTestCase):
     @classmethod
     def setUpClass(self):
-        svd = SVD('test.svd')
-        svd.parse()
-        self.client = RegiceClientTest()
-        self.dev = RegiceDevice(svd, self.client)
-        self.memory = self.client.memory
+        super(TestMux, self).setUpClass()
         self.mux_field = self.dev.TEST1.TESTA.A3
         self.tree = ClockTree()
         FixedClock(name='test0', device=self.dev, freq=1234)
@@ -459,14 +444,7 @@ def ext_get_div_none(div):
 def ext_get_div_zero(div):
     return 0
 
-class TestDivider(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
-        svd = SVD('test.svd')
-        svd.parse()
-        self.client = RegiceClientTest()
-        self.dev = RegiceDevice(svd, self.client)
-
+class TestDivider(ClockTestCase):
     def test_build(self):
         div = Divider()
         self.assertFalse(div.build())
@@ -565,14 +543,7 @@ class TestDivider(unittest.TestCase):
 def ext_get_freq(pll):
     return 1234
 
-class TestPLL(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
-        svd = SVD('test.svd')
-        svd.parse()
-        self.client = RegiceClientTest()
-        self.dev = RegiceDevice(svd, self.client)
-
+class TestPLL(ClockTestCase):
     def test_enabled(self):
         pll = PLL(name='pll', device=self.dev, get_freq=ext_get_freq,
                   en_field=self.dev.TEST1.TESTA.A3)
@@ -591,14 +562,10 @@ class TestPLL(unittest.TestCase):
         pll = PLL(device=self.dev, get_freq=ext_get_freq)
         self.assertTrue(pll.build())
 
-class TestClockTree(unittest.TestCase):
+class TestClockTree(ClockTestCase):
     @classmethod
     def setUpClass(self):
-        svd = SVD('test.svd')
-        svd.parse()
-        self.client = RegiceClientTest()
-        self.dev = RegiceDevice(svd, self.client)
-        self.memory = self.client.memory
+        super(TestClockTree, self).setUpClass()
         FixedClock(name='osc1', device=self.dev, freq=1234)
         FixedClock(name='osc2', device=self.dev, freq=2345)
         FixedClock(name='osc3', device=self.dev, freq=5432)
