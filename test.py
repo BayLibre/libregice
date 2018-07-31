@@ -307,9 +307,16 @@ class TestClock(unittest.TestCase):
         self.assertIn('test1', self.dev.clocktree.clocks)
 
     def test_check(self):
-        clk = Clock(device=self.dev, name='test1')
+        clk = Clock(name='test1')
         with self.assertRaises(Exception):
             clk.check()
+
+        clk = Clock(device=self.dev)
+        with self.assertRaises(Exception):
+            clk.check()
+
+        clk = Clock(device=self.dev, name='test1')
+        clk.check()
 
     def test_get_parent(self):
         clk1 = Clock(device=self.dev, name='test1')
@@ -334,13 +341,14 @@ class TestGate(unittest.TestCase):
 
     def test_enabled(self):
         field = self.dev.TEST1.TESTA.A1
-        clock = Gate(en_field=field)
+        clock = Gate(name='gate', device=self.dev, en_field=field)
         self.dev.TEST1.TESTA.A1.write(1)
         self.assertTrue(clock.enabled())
         self.dev.TEST1.TESTA.A1.write(0)
         self.assertFalse(clock.enabled())
 
-        clock = Gate(en_field=field, rdy_field=field)
+        clock = Gate(name='gate', device=self.dev,
+                     en_field=field, rdy_field=field)
         self.dev.TEST1.TESTA.A1.write(0)
         self.assertFalse(clock.enabled())
 
@@ -351,12 +359,20 @@ class TestGate(unittest.TestCase):
         self.assertTrue(clock.build())
 
 class TestFixedClock(unittest.TestCase):
+    @classmethod
+    def setUpClass(self):
+        svd = SVD('test.svd')
+        svd.parse()
+        self.client = RegiceClientTest()
+        self.dev = RegiceDevice(svd, self.client)
+        self.memory = self.client.memory
+
     def test_fixed_clock(self):
         clock = FixedClock(freq=123456)
         self.assertEqual(clock.freq, 123456)
 
     def test_get_freq(self):
-        clock = FixedClock(freq=123456)
+        clock = FixedClock(name='osc', device=self.dev, freq=123456)
         self.assertEqual(clock.get_freq(), 123456)
 
     def test_build(self):
@@ -383,14 +399,14 @@ class TestMux(unittest.TestCase):
         FixedClock(name='test1', device=self.dev, freq=123456)
         FixedClock(name='test3', device=self.dev, freq=12345)
         self.mux_parents = {0: 'test0', 1: 'test1', 3: 'test3'}
-        self.mux = Mux(device=self.dev, parents=self.mux_parents,
-                       mux_field=self.mux_field)
+        self.mux = Mux(name='muxe', device=self.dev,
+                       parents=self.mux_parents, mux_field=self.mux_field)
 
     def test_get_parent(self):
         parent = self.mux.get_parent()
         self.assertEqual(parent.name, 'test3')
 
-        mux = Mux(device=self.dev, parents=self.mux_parents,
+        mux = Mux(name='mux', device=self.dev, parents=self.mux_parents,
                   get_mux=ext_get_mux)
         parent = mux.get_parent()
         self.assertEqual(parent.name, 'test0')
@@ -398,7 +414,8 @@ class TestMux(unittest.TestCase):
     def test_get_freq(self):
         self.assertEqual(self.mux._get_freq(), 12345)
 
-        mux = Mux(device=self.dev, parents={0: 'test0', 1: 'test1', 3: None},
+        mux = Mux(name='pll', device=self.dev,
+                  parents={0: 'test0', 1: 'test1', 3: None},
                   mux_field=self.dev.TEST1.TESTA.A3)
         self.assertEqual(mux.get_freq(), 0)
 
@@ -426,7 +443,7 @@ class TestMux(unittest.TestCase):
         self.assertTrue(mux.build())
 
     def test_enabled(self):
-        mux = Mux(device=self.dev, parents={0: 'test0', 3: None},
+        mux = Mux(name='pll', device=self.dev, parents={0: 'test0', 3: None},
                   mux_field=self.dev.TEST1.TESTA.A3)
         self.assertFalse(mux.enabled())
         self.dev.TEST1.TESTA.A3.write(0)
@@ -478,19 +495,19 @@ class TestDivider(unittest.TestCase):
         tree = ClockTree()
         FixedClock(name='test', device=self.dev, freq=123456)
 
-        div = Divider(device=self.dev, parent='test', div=2)
+        div = Divider(name='div', device=self.dev, parent='test', div=2)
         self.assertEqual(div._get_div(), 2)
 
-        div = Divider(device=self.dev, parent='test',
+        div = Divider(name='div', device=self.dev, parent='test',
                       div_field=self.dev.TEST1.TESTA.A3)
         self.assertEqual(int(div._get_div()), 3)
 
-        div = Divider(device=self.dev, parent='test',
+        div = Divider(name='div', device=self.dev, parent='test',
                       div_field=self.dev.TEST1.TESTA.A3,
                       div_type=Divider.POWER_OF_TWO)
         self.assertEqual(int(div._get_div()), 8)
 
-        div = Divider(device=self.dev, parent='test',
+        div = Divider(name='div', device=self.dev, parent='test',
                       div_field=self.dev.TEST1.TESTA.A3, table={3: 12, 4: 16})
         self.assertEqual(int(div._get_div()), 12)
 
@@ -498,12 +515,13 @@ class TestDivider(unittest.TestCase):
         with self.assertRaises(InvalidDivider):
             div._get_div()
 
-        div = Divider(device=self.dev, parent='test',
+        div = Divider(name='div', device=self.dev, parent='test',
                       div_field=self.dev.TEST1.TESTA.A3, div_type=9999)
         with self.assertRaises(InvalidDivider):
             div._get_div()
 
-        div = Divider(device=self.dev, parent='test', get_div=ext_get_div)
+        div = Divider(name='div', device=self.dev, parent='test',
+                      get_div=ext_get_div)
         self.assertTrue(div.build())
         self.assertEqual(int(div._get_div()), 3)
 
@@ -512,18 +530,20 @@ class TestDivider(unittest.TestCase):
         tree = ClockTree()
         FixedClock(name='test', device=self.dev, freq=freq)
 
-        div = Divider(device=self.dev, parent='test', div=2)
+        div = Divider(name='div', device=self.dev, parent='test', div=2)
         self.assertEqual(div._get_freq(), freq / 2)
 
-        div = Divider(device=self.dev, parent='test', get_div=ext_get_div_none)
+        div = Divider(name='div', device=self.dev, parent='test',
+                      get_div=ext_get_div_none)
         self.assertEqual(div._get_freq(), 0)
 
-        div = Divider(device=self.dev, parent='test', get_div=ext_get_div_zero)
+        div = Divider(name='div', device=self.dev, parent='test',
+                      get_div=ext_get_div_zero)
         with self.assertRaises(ZeroDivisionError):
             self.assertEqual(div._get_freq(), 0)
 
-        div = Divider(device=self.dev, parent='test', get_div=ext_get_div_zero,
-                      div_type=Divider.ZERO_TO_GATE)
+        div = Divider(name='div', device=self.dev, parent='test',
+                      get_div=ext_get_div_zero, div_type=Divider.ZERO_TO_GATE)
         self.assertEqual(div._get_freq(), 0)
 
     def test_enabled(self):
@@ -531,14 +551,15 @@ class TestDivider(unittest.TestCase):
         tree = ClockTree()
         FixedClock(name='test', device=self.dev, freq=freq)
 
-        div = Divider(device=self.dev, parent='test', div=2)
+        div = Divider(name='div', device=self.dev, parent='test', div=2)
         self.assertTrue(div.enabled())
 
-        div = Divider(device=self.dev, parent='test', get_div=ext_get_div_zero,
-                      div_type=Divider.ZERO_TO_GATE)
+        div = Divider(name='div', device=self.dev, parent='test',
+                      get_div=ext_get_div_zero, div_type=Divider.ZERO_TO_GATE)
         self.assertFalse(div.enabled())
 
-        div = Divider(device=self.dev, parent='test', get_div=ext_get_div_none)
+        div = Divider(name='div', device=self.dev, parent='test',
+                      get_div=ext_get_div_none)
         self.assertFalse(div.enabled())
 
 def ext_get_freq(pll):
@@ -553,7 +574,7 @@ class TestPLL(unittest.TestCase):
         self.dev = RegiceDevice(svd, self.client)
 
     def test_enabled(self):
-        pll = PLL(device=self.dev, get_freq=ext_get_freq,
+        pll = PLL(name='pll', device=self.dev, get_freq=ext_get_freq,
                   en_field=self.dev.TEST1.TESTA.A3)
         self.dev.TEST1.TESTA.A3.write(1)
         self.assertTrue(pll.enabled())
@@ -561,7 +582,7 @@ class TestPLL(unittest.TestCase):
         self.assertFalse(pll.enabled())
 
     def test_get_freq(self):
-        pll = PLL(device=self.dev, get_freq=ext_get_freq)
+        pll = PLL(name='pll', device=self.dev, get_freq=ext_get_freq)
         self.assertTrue(pll.get_freq(), 1234)
 
     def test_build(self):

@@ -239,6 +239,7 @@ class Clock(object):
 
             :return: The clock's parent
         """
+        self.check()
         return self._get_parent()
 
     def _get_freq(self):
@@ -254,10 +255,10 @@ class Clock(object):
 
             :return: The clock frequency, in Hz
         """
+        self.check()
         return self._get_freq()
 
     def _enabled(self):
-        self.check()
         if self.rdy_field:
             return self.rdy_field == self.rdy_val
         if self.en_field:
@@ -274,13 +275,14 @@ class Clock(object):
 
             :return: True if the clock and its ancestors are enabled
         """
+        self.check()
         parent_enabled = True
         if self.parent:
             parent_enabled = self.get_parent().enabled()
         return self._enabled() & parent_enabled
 
     def _check(self):
-        raise Exception()
+        pass
 
     def check(self):
         """
@@ -290,6 +292,10 @@ class Clock(object):
             configured to do the clock operations. This is used to catch
             error at one place and simplify the clock operations.
         """
+        if not self.name:
+            raise MissingAttribute(None, 'name')
+        if not self.tree:
+            raise MissingAttribute(self.tree, 'tree')
         self._check()
 
     def build(self):
@@ -333,7 +339,6 @@ class Gate(Clock):
             raise MissingAttribute(self.name, 'en_field')
 
     def _enabled(self):
-        self.check()
         if self.rdy_field:
             return self.rdy_field == self.rdy_val
         return self.en_field == self.en_val
@@ -427,7 +432,6 @@ class Divider(Clock):
             raise MissingAttributes(self.name, ['div', 'div_field'])
 
     def _get_div(self):
-        self.check()
         if self.ext_get_div:
             return self.ext_get_div(self)
         if self.div:
