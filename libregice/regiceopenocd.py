@@ -43,8 +43,11 @@ class RegiceOpenOCD(RegiceClient):
             :param address: The physical address of register to read
             :return: The value of register
         """
+        self.ocd.Halt(1)
         ocd_read = getattr(self.ocd, 'ReadMem{}'.format(width))
-        return ocd_read(address)
+        value = ocd_read(address)
+        self.ocd.Resume()
+        return value
 
     def write(self, width, address, value):
         """
@@ -54,5 +57,8 @@ class RegiceOpenOCD(RegiceClient):
             :param address: The physical address of register to write
             :param value: The value to write to the register
         """
+        self.ocd.Halt(1)
         ocd_write = getattr(self.ocd, 'WriteMem{}'.format(width))
-        return ocd_write(address, value)
+        value = ocd_write(address, value)
+        self.ocd.Resume()
+        return value
