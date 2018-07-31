@@ -33,7 +33,17 @@ class InvalidFrequency(Exception):
     """
         An exception raised when the frequency is outside frequency range
     """
-    pass
+    def __init__(self, clock, freq=None):
+        if clock.freq_min and freq and freq < clock.freq_min:
+            out = "{}: frequency should be higher than {} but is {}.".format(
+                clock.name, clock.freq_min, freq)
+        elif clock.freq_max and freq and clock.freq_max < freq:
+            out = "{}: frequency should be lower than {} but is {}.".format(
+                clock.name, clock.freq_max, freq)
+        else:
+            out = "{}: Failed to determine clock frequency.".format(clock.name)
+        super(InvalidFrequency, self).__init__(out)
+        self.freq = freq
 
 class UnknownClock(Exception):
     """
@@ -217,6 +227,8 @@ class Clock(object):
         self.en_val = kwargs.get('en_val', 1)
         self.rdy_field = kwargs.get('rdy_field', None)
         self.rdy_val = kwargs.get('rdy_val', 1)
+        self.freq_min = kwargs.get('min', None)
+        self.freq_max = kwargs.get('max', None)
 
         if self.device:
             self.tree = self.device.clocktree
@@ -243,7 +255,7 @@ class Clock(object):
         return self._get_parent()
 
     def _get_freq(self):
-        raise InvalidFrequency()
+        raise InvalidFrequency(self)
 
     def get_freq(self):
         """
@@ -256,7 +268,12 @@ class Clock(object):
             :return: The clock frequency, in Hz
         """
         self.check()
-        return self._get_freq()
+        freq = self._get_freq()
+        if self.freq_min and freq < self.freq_min:
+            raise InvalidFrequency(self, freq=freq)
+        if self.freq_max and self.freq_max < freq:
+            raise InvalidFrequency(self, freq=freq)
+        return freq
 
     def _enabled(self):
         if self.rdy_field:

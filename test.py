@@ -364,6 +364,16 @@ class TestFixedClock(ClockTestCase):
         clock = FixedClock(name='osc', device=self.dev, freq=123456)
         self.assertEqual(clock.get_freq(), 123456)
 
+        clock = FixedClock(name='osc', device=self.dev, min=123, max=456)
+        clock.freq = 12
+        with self.assertRaises(InvalidFrequency):
+            clock.get_freq()
+        clock.freq = 567
+        with self.assertRaises(InvalidFrequency):
+            clock.get_freq()
+        clock.freq = 123
+        self.assertEqual(clock.get_freq(), 123)
+
     def test_build(self):
         clock = FixedClock()
         self.assertFalse(clock.build())
