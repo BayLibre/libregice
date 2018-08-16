@@ -23,7 +23,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from svd import SVD
+from svd import SVD, SVDText
+from regicecommon.pkg import open_resource
 
 class InvalidField(Exception):
     """
@@ -115,10 +116,18 @@ class Regice:
         """
             Load the SVD file
 
+            Load a SVD file. If the file name is a valid path, the function will
+            load the file. Otherwise, the function will try to get the SVD file
+            from package. If the function can't find a SVD file, this raises a
+            FileNotFoundError error.
+
             :param file: The name of the file to open to load the SVD
         """
         try:
-            self.svd = SVD(file)
+            if os.path.exists(file):
+                self.svd = SVD(file)
+            else:
+                self.svd = SVDText(open_resource(None, file).read())
             self.svd.parse()
         except OSError:
             raise FileNotFoundError
