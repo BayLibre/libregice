@@ -26,11 +26,12 @@
 import sys
 import unittest
 
-from libregice import Regice, RegiceClient, SVDNotLoaded, InvalidRegister
-from libregice import RegiceClientTest, RegiceDevice, RegiceRegister
+from libregice import Regice, RegiceClient, RegiceClientTest
+from libregice import SVDNotLoaded, InvalidRegister
 from libregice.clock import FixedClock, Clock, Gate, Mux, ClockTree
 from libregice.clock import Divider, PLL
 from libregice.clock import InvalidDivider, UnknownClock, InvalidFrequency
+from libregice.device import Device, RegiceRegister
 from svd import SVD
 
 class TestRegiceClientTest(unittest.TestCase):
@@ -161,7 +162,7 @@ class TestRegiceObject(unittest.TestCase):
         svd = SVD('test.svd')
         svd.parse()
         self.client = RegiceClientTest()
-        self.dev = RegiceDevice(svd, self.client, RegiceRegister.FORCE_READ)
+        self.dev = Device(svd, self.client)
         self.memory = self.client.memory
 
     def setUp(self):
@@ -290,7 +291,7 @@ class ClockTestCase(unittest.TestCase):
         svd = SVD('test.svd')
         svd.parse()
         self.client = RegiceClientTest()
-        self.dev = RegiceDevice(svd, self.client)
+        self.dev = Device(svd, self.client)
         self.memory = self.client.memory
 
     @classmethod

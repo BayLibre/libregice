@@ -24,7 +24,6 @@
 # SOFTWARE.
 
 from libregice.regice import RegiceClient, Regice, SVDNotLoaded, InvalidRegister
-from libregice.regice import RegiceDevice, RegiceRegister
 from libregice.regiceclienttest import RegiceClientTest
 from libregice.regiceopenocd import RegiceOpenOCD
 from libregice.regicejlink import RegiceJLink
