@@ -1,0 +1,10 @@
+stages:
+  - test
+
+test:
+  stage: test
+  script:
+    - apt-get update -qy
+    - apt-get install -y python3-dev python3-setuptools
+    - python3 setup.py install
+    - python3 ./test.py
