@@ -24,7 +24,6 @@
 # SOFTWARE.
 
 from svd import SVD
-from libregice.clock import ClockTree
 
 class InvalidField(Exception):
     """

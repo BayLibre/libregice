@@ -32,8 +32,6 @@
     This uses the regice client to perform register accesses.
 """
 
-from libregice.clock import ClockTree
-
 class RegiceObject:
     """
         A class to easily manipulate a register or a field
@@ -379,19 +377,8 @@ class Device:
         self.name = svd.name
         self.svd = svd
         self.client = client
-        self.clocktree = ClockTree()
         self.regice_init()
 #        self.device_init()
-
-    def clock_init(self):
-        """
-            Initialize the clock tree
-
-            Should be implemented to populate the clock tree.
-            This raises a not NotImplementedError if the function is not
-            implemented.
-        """
-        raise NotImplementedError
 
     def device_init(self):
         """
