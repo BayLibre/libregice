@@ -30,7 +30,8 @@ test:
 full_test:
   stage: test
   script:
-  - pip install -e git+https://gitlab.com/abailon/regice-tests.git#egg=RegiceTests
+  - git clone https://gitlab.com/abailon/regice-tests.git
+  - cd regice-tests; ./setup.py install; cd ..
   - python -m regicetests.test
   artifacts:
     paths:
