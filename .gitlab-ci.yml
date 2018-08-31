@@ -1,10 +1,67 @@
-stages:
-  - test
+# Official language image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/python/tags/
+image: python:latest
+
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache"
+
+# Pip's cache doesn't store the python packages
+# https://pip.pypa.io/en/stable/reference/pip_install/#caching
+#
+# If you want to also cache the installed packages, you have to install
+# them in a virtualenv and cache it as well.
+cache:
+  paths:
+    - .cache/pip
+    - venv/
+
+before_script:
+  - pip install virtualenv
+  - virtualenv venv
+  - source venv/bin/activate
+  - python setup.py install
 
 test:
+  script:
+  - python -m libregicetest.test
+
+full_test:
   stage: test
   script:
-    - apt-get update -qy
-    - apt-get install -y python3-dev python3-setuptools
-    - python3 setup.py install
-    - python3 ./test.py
+  - pip install -e git+https://gitlab.com/abailon/regice-tests.git#egg=RegiceTests
+  - python -m regicetests.test
+  artifacts:
+    paths:
+    - htmlcov
+
+lint:
+  stage: test
+  script:
+  - mkdir out
+  - pip install pylint-exit pylint-json2html
+  - pylint -f json libregicetest > out/pylint.json || pylint-exit $?
+  - pylint-json2html -o out/pylint.html out/pylint.json
+  artifacts:
+    paths:
+    - out
+
+pages:
+  stage: deploy
+  before_script:
+  - "true"
+  script:
+  - out=$(git name-rev  $(git rev-parse HEAD)); echo "$branch"
+  - remote_branch=$(echo $out | cut -d " " -f 2); echo "$remote_branch"
+  - branch=$(echo $remote_branch | cut -d "/" -f 3); echo "$branch"
+  - mkdir -p public/$branch/coverage
+  - cp -fr htmlcov/* public/$branch/coverage/
+  - cp -fr out/* public/$branch/
+  dependencies:
+  - full_test
+  - lint
+  artifacts:
+    paths:
+    - public
+
