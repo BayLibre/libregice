@@ -29,7 +29,8 @@ import unittest
 from libregice import Regice, RegiceClient, RegiceClientTest
 from libregice import SVDNotLoaded, InvalidRegister
 from libregice.device import Device, RegiceRegister
-from svd import SVD
+from regicetest import open_svd_file
+from svd import SVDText
 
 class TestRegiceClientTest(unittest.TestCase):
     @classmethod
@@ -156,7 +157,8 @@ class TestRegice(unittest.TestCase):
 class TestRegiceObject(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        svd = SVD('test.svd')
+        file = open_svd_file('test.svd')
+        svd = SVDText(file.read())
         svd.parse()
         self.client = RegiceClientTest()
         self.dev = Device(svd, self.client)
@@ -273,14 +275,8 @@ class TestRegiceObject(unittest.TestCase):
         reg.A3.write(0)
         self.assertEqual(self.memory[address], 0)
 
-def ext_get_freq(clk):
-    return 1234
-
-def ext_enable(clk):
-    return clk.en_field.write(1)
-
-def ext_disable(clk):
-    return clk.en_field.write(0)
+def run_tests(module):
+    return unittest.main(module=module, exit=False).result
 
 if __name__ == '__main__':
     unittest.main()

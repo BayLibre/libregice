@@ -27,7 +27,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='LibRegice',
-    packages=find_packages(),
+    packages=['libregice'],
     author='Alexandre Bailon',
     author_email='abailon@baylibre.com',
     description='This library allows to control a SoC or MCU for development and debugging purpose.',
@@ -46,4 +46,31 @@ setup(
         'git+https://github.com/BayLibre/OpenOCD.git#egg=OpenOCD',
         'git+https://github.com/BayLibre/RegiceSVD.git#egg=RegiceSVD',
     ],
+)
+
+setup(
+    name='LibRegiceTest',
+    packages=['libregicetest'],
+    author='Alexandre Bailon',
+    author_email='abailon@baylibre.com',
+    description='Test for libregice.',
+    url='https://github.com/BayLibre/libregice',
+    classifiers=[
+        "Programming Language :: Python",
+        "Development Status :: 1 - Planning",
+        "License :: MIT",
+        "Natural Language :: English",
+        "Operating System :: GNU/Linux",
+        "Programming Language :: Python :: 3.6",
+    ],
+    install_requires=['LibRegice', 'RegiceTest'],
+    dependency_links=[
+        'git+https://github.com/BayLibre/libregice.git#egg=LibRegice',
+        'git+https://github.com/BayLibre/regice-test.git#egg=RegiceTest',
+    ],
+    entry_points={
+        'regice': [
+                'run_tests = libregicetest.test:run_tests',
+        ]
+    },
 )
