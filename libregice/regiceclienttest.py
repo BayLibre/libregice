@@ -61,6 +61,8 @@ class RegiceClientTest(RegiceClient):
             :param address: The physical address of register to read
             :return: The value of register
         """
+        if not address in self.memory:
+            self.memory[address] = 0
         return self.memory[address]
 
     def write(self, width, address, value):
