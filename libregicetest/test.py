@@ -27,8 +27,9 @@ import sys
 import unittest
 
 from libregice import Regice, RegiceClient, RegiceClientTest
-from libregice import SVDNotLoaded, InvalidRegister
+from libregice import InvalidRegister
 from libregice.device import Device, RegiceRegister
+from regicecommon.helpers import load_svd
 from regicetest import open_svd_file
 from svd import SVDText
 
@@ -55,19 +56,18 @@ class TestRegiceClientTest(unittest.TestCase):
 class TestRegice(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.regice = Regice(RegiceClientTest())
+        svd = load_svd('test.svd')
+        self.regice = Regice(RegiceClientTest(), svd)
         self.memory = self.regice.client.memory
-        self.regice.load_svd('test.svd')
 
     def setUp(self):
         self.regice.client.memory_restore()
 
     def test_load(self):
         with self.assertRaises(FileNotFoundError):
-            self.regice.load_svd('doesntexist.svd')
+            load_svd('doesntexist.svd')
 
-        self.regice.load_svd('test.svd')
-        self.assertNotEqual(self.regice.svd, None)
+        self.assertNotEqual(load_svd('test.svd'), None)
 
     def test_get_peripheral_list(self):
         peripherals = self.regice.get_peripheral_list()
@@ -130,15 +130,6 @@ class TestRegice(unittest.TestCase):
     def test_register_exist(self):
         self.assertTrue(self.regice.register_exist('TEST1', 'TESTA'))
         self.assertFalse(self.regice.register_exist('TEST1', 'TESTC'))
-
-    def test_not_svd_loaded(self):
-        svd = self.regice.svd
-        self.regice.svd = None
-        with self.assertRaises(SVDNotLoaded):
-            self.regice.get_peripheral_list()
-        with self.assertRaises(SVDNotLoaded):
-            self.regice.read('TEST1', 'TESTA')
-        self.regice.svd = svd
 
     def test_get_size(self):
         size = self.regice.get_size('TEST1', 'TESTA')

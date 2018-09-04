@@ -23,11 +23,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
-
-from svd import SVD, SVDText
-from regicecommon.pkg import open_resource
-
 class InvalidField(Exception):
     """
         An exception raised if the requested field doesn't exist
@@ -58,13 +53,6 @@ class InvalidPeripheral(Exception):
     """
     def __init__(self, peripheral):
         super().__init__("Invalid peripheral " + peripheral)
-
-class SVDNotLoaded(Exception):
-    """
-        An exception raised if the SVD have not been loaded
-    """
-    def __init__(self):
-        super().__init__("SVD file have not been loaded")
 
 class RegiceClient:
     """
@@ -108,41 +96,12 @@ class Regice:
 
         :param client: The client that connects to device, and provides
                        methods to access to device memory and register
+        :param svd: The SVD file
     """
-    def __init__(self, client):
-        self.svd = None
+    def __init__(self, client, svd):
+        self.svd = svd
         self.peripheral = None
         self.client = client
-
-    def load_svd(self, file):
-        """
-            Load the SVD file
-
-            Load a SVD file. If the file name is a valid path, the function will
-            load the file. Otherwise, the function will try to get the SVD file
-            from package. If the function can't find a SVD file, this raises a
-            FileNotFoundError error.
-
-            :param file: The name of the file to open to load the SVD
-        """
-        try:
-            if os.path.exists(file):
-                self.svd = SVD(file)
-            else:
-                self.svd = SVDText(open_resource(None, file).read())
-            self.svd.parse()
-        except OSError:
-            raise FileNotFoundError
-
-    def svd_get(self):
-        """
-            Get the svd. If it have not been loaded, it raise an exception.
-
-            :return: The svd, or raise SVDNotLoaded exception
-        """
-        if self.svd is None:
-            raise SVDNotLoaded()
-        return self.svd
 
     def svd_get_peripheral_list(self):
         """
@@ -150,8 +109,7 @@ class Regice:
 
             :return: A list of peripherals
         """
-        svd = self.svd_get()
-        return svd.peripherals.keys()
+        return self.svd.peripherals.keys()
 
     def svd_get_peripheral(self, peripheral):
         """
@@ -160,10 +118,9 @@ class Regice:
             :return: The name of peripheral, or raise an InvalidPeripheral
                      exception if the peripheral doesn't exist
         """
-        svd = self.svd_get()
         if not peripheral in self.svd_get_peripheral_list():
             raise InvalidPeripheral(peripheral)
-        return svd.peripherals[peripheral]
+        return self.svd.peripherals[peripheral]
 
     def svd_get_register_list(self, svd, peripheral):
         """

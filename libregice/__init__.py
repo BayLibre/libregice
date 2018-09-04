@@ -23,7 +23,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from libregice.regice import RegiceClient, Regice, SVDNotLoaded, InvalidRegister
+from libregice.regice import RegiceClient, Regice, InvalidRegister
 from libregice.regiceclienttest import RegiceClientTest
 from libregice.regiceopenocd import RegiceOpenOCD
 from libregice.regicejlink import RegiceJLink
