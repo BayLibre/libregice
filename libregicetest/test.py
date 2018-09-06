@@ -26,12 +26,14 @@
 import sys
 import unittest
 
-from libregice import Regice, RegiceClient, RegiceClientTest
+from libregice import Regice, RegiceClient, RegiceClientTest, RegisterSimulation
 from libregice import InvalidRegister
 from libregice.device import Device, RegiceRegister
 from regicecommon.helpers import load_svd
+from regicecommon.pkg import open_resource
 from regicetest import open_svd_file
 from svd import SVDText
+from time import sleep
 
 class TestRegiceClientTest(unittest.TestCase):
     @classmethod
@@ -265,6 +267,72 @@ class TestRegiceObject(unittest.TestCase):
         self.assertEqual(self.memory[address], 3)
         reg.A3.write(0)
         self.assertEqual(self.memory[address], 0)
+
+class TestRegisterSimulation(unittest.TestCase):
+    @classmethod
+    def setUpClass(self):
+        self.svd = load_svd('BL123.svd')
+        self.client = RegiceClientTest()
+        self.dev = Device(self.svd, self.client)
+
+    def setUp(self):
+        self.client.memory_restore()
+
+    def test_read(self):
+        simu = RegisterSimulation(self.client, self.svd)
+        simu.read(open_resource(None, 'BL123_clock.sim'))
+        self.assertIn('0', simu.config.sections())
+        self.assertNotIn('Options', simu.config.sections())
+        self.assertEqual(simu.peripheral_name, 'CLOCK0')
+
+    def test_start(self):
+        simu = RegisterSimulation(self.client, self.svd)
+        simu.read(open_resource(None, 'BL123_clock.sim'))
+
+        self.assertTrue(self.dev.CLOCK0.OSC0.EN == 0)
+        simu.start()
+        self.assertTrue(self.dev.CLOCK0.OSC0.EN == 1)
+        self.assertEqual(simu.section, '0')
+
+    def test_sleep(self):
+        simu = RegisterSimulation(self.client, self.svd)
+        self.assertFalse(simu.sleep())
+        self.assertTrue(simu.sleep(1))
+        self.assertTrue(simu.sleep())
+        sleep(1)
+        self.assertFalse(simu.sleep())
+
+    def test_update(self):
+        simu = RegisterSimulation(self.client, self.svd)
+        simu.read(open_resource(None, 'BL123_clock.sim'))
+        simu.start()
+
+        while simu.section != '8':
+            simu.update()
+        self.assertEqual(simu.section, '8')
+        self.assertTrue(self.dev.CLOCK0.UART1.EN == 1)
+
+        simu.update()
+        self.assertEqual(simu.section, '8')
+        self.assertTrue(self.dev.CLOCK0.UART1.EN == 1)
+
+        sleep(1)
+        simu.update()
+        self.assertEqual(simu.section, '9')
+        self.assertTrue(self.dev.CLOCK0.UART1.EN == 0)
+
+        while simu.section != '14':
+            simu.update()
+        self.assertEqual(simu.section, '14')
+        self.assertTrue(self.dev.CLOCK0.UART1.EN == 1)
+
+        sleep(1)
+        simu.update()
+        self.assertEqual(simu.section, '9')
+        self.assertTrue(self.dev.CLOCK0.UART1.EN == 0)
+
+        simu.update()
+        self.assertEqual(simu.section, '10')
 
 def run_tests(module):
     return unittest.main(module=module, exit=False).result

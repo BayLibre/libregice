@@ -25,5 +25,6 @@
 
 from libregice.regice import RegiceClient, Regice, InvalidRegister
 from libregice.regiceclienttest import RegiceClientTest
+from libregice.regiceclienttest import RegisterSimulation, Simulation
 from libregice.regiceopenocd import RegiceOpenOCD
 from libregice.regicejlink import RegiceJLink
