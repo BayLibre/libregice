@@ -281,6 +281,16 @@ class RegiceField(RegiceObject):
         return "{}.{}.{}".format(self.svd.parent.parent.name,
                                  self.svd.parent.name, self.name)
 
+    def address(self):
+        """
+            Return the address of register
+
+            This returns the absolute address of the register that owns this
+            field.
+            :return: the address of register
+        """
+        return self.parent.address()
+
 class RegiceRegister(RegiceObject):
     """
         A class to easily manipulate a register
@@ -348,6 +358,14 @@ class RegiceRegister(RegiceObject):
 
     def __str__(self):
         return "{}.{}".format(self.svd.parent.name, self.name)
+
+    def address(self):
+        """
+            Return the address of register
+
+            :return: the address of register
+        """
+        return self.svd.address()
 
 class RegicePeripheral:
     """
