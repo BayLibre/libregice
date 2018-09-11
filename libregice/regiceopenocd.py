@@ -26,6 +26,73 @@
 from OpenOCD import OpenOCD
 from libregice import RegiceClient
 
+class OpenOCDThreadSafe(OpenOCD):
+    """
+        A class derived from OpenOCD that is thread safe
+    """
+    def __init__(self, Host="localhost", Port=4444):
+        self.lock = threading.Lock()
+        self.blocking = False
+        super(OpenOCDThreadSafe, self).__init__(Host, Port)
+
+    def Readout(self):
+        """
+            Communication functions
+
+            This works exactly like the original method except that
+            if blocking attribute is False then the method will return None
+            instead of waiting for data.
+
+            In addition, because this accesses to a critical resource,
+            a lock must be held before to call this method.
+        """
+        buf = ''
+        out = []
+        while True:
+            if not self.blocking:
+                data = self.tn.read_eager().decode()
+                if data == '':
+                    return None
+                buf += data
+            else:
+                buf += self.tn.read_some().decode()
+            lines = buf.splitlines()
+            if len(lines) > 1:
+                for buf in lines[:-1]:
+                    if buf:
+                        out.append(buf)
+                buf = lines[-1]
+            if buf == '> ':
+                return out
+
+    def Exec(self, Cmd, *args):
+        """
+            Execute a command
+
+            This works exactly like the original method except that it will
+            acquire a lock before to execute the command.
+            This protects Readout method which access to a critical resource.
+        """
+        self.acquire()
+        self.blocking = True
+        line = super(OpenOCDThreadSafe, self).Exec(Cmd, *args)
+        self.blocking = False
+        self.release()
+        return line
+
+    def acquire(self):
+        """
+            Acquire a lock to protect Readout method
+        """
+        self.lock.acquire()
+
+    def release(self):
+        """
+            Release the lock
+        """
+        self.lock.release()
+
+
 class RegiceOpenOCD(RegiceClient):
     """
         A class derived from RegiceClient, to use OpenOCD
@@ -33,7 +100,7 @@ class RegiceOpenOCD(RegiceClient):
         This class provides a way to read and write memory using JTAG.
     """
     def __init__(self):
-        self.ocd = OpenOCD()
+        self.ocd = OpenOCDThreadSafe()
 
     def read(self, width, address):
         """
