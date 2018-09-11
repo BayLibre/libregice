@@ -207,6 +207,24 @@ class RegiceOpenOCD(RegiceClient):
         self.ocd.Resume()
         return value
 
+    def read_list(self, addresses):
+        """
+            Read the value of addresses listed in dict
+
+            :param dict: A dictionnary with the width as key, and the list of
+                         address to read for that width
+            :return: a dictionnary of value read, and with the address used as
+                     key
+        """
+        values = {}
+        self.ocd.Halt(1)
+        for width in addresses:
+            ocd_read = getattr(self.ocd, 'ReadMem{}'.format(width))
+            for address in addresses[width]:
+                values[address] = ocd_read(address)
+        self.ocd.Resume()
+        return values
+
     def write(self, width, address, value):
         """
             Write a value to the register
