@@ -165,16 +165,14 @@ class RegiceOpenOCDThread(threading.Thread):
         while not self.quit:
             self.ocd.acquire()
             lines = self.ocd.Readout()
+            self.ocd.release()
             if lines and self.client.watchpoint:
-                self.ocd.release()
                 pc_address = self.ocd.Reg('pc').Read()
                 for address in self.client.watchpoints:
                     self.client.watchpoints[address].run(pc_address)
                 self.ocd.Resume()
-                self.ocd.acquire()
             else:
                 time.sleep(0.001)
-            self.ocd.release()
 
     def join(self, timeout=None):
         """
