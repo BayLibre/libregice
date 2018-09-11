@@ -117,6 +117,17 @@ class RegiceClient:
         """
         raise NotImplementedError
 
+    def read_list(self, addresses):
+        """
+            Read the value of addresses listed in addresses
+
+            :param addresses: A dictionnary with the width as key, and the list
+                              of address to read for that width
+            :return: a dictionnary of value read, and with the address used as
+                     key
+        """
+        raise NotImplementedError
+
     def write(self, width, address, value):
         """
             Write a value to the register

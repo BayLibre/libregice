@@ -373,6 +373,7 @@ class RegicePeripheral:
     """
     def __init__(self, svd, client):
         self.svd = svd
+        self.client = client
         for register_name in svd.registers:
             register = svd.registers[register_name]
             register_obj = RegiceRegister(register, client)
