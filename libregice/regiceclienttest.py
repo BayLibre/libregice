@@ -27,8 +27,79 @@ import threading
 from time import time, sleep
 
 from configparser import ConfigParser
-from libregice import RegiceClient
+from libregice import RegiceClient, Watchpoint
 from libregice.device import Device
+
+class WatchpointTest(Watchpoint):
+    """
+        Implement Watchpoint for test client
+        :param address: The start address of the watchpoint
+        :param length: The length of watchpoint, in bytes
+        :param access: The type of access (R/W) that trigger the watchpoint
+        :param callback: The callback to execute when watchpoint stops cpu
+        :param data: The data to pass to callback
+    """
+    def __init__(self, address, length, access, callback, data):
+        super(WatchpointTest, self).__init__(address, length, access, callback,
+                                             data)
+        self.enabled = False
+
+    def enable(self):
+        """
+            Enable the watchpoint
+        """
+        self.enabled = True
+
+    def disable(self):
+        """
+            Disable the watchpoint
+        """
+        self.enabled = False
+
+    def test(self, address):
+        """
+            Test if the address hit the watchpoint address
+
+            This test if the given address is in the address range of the
+            watchpoint.
+
+            :param address: The address to test
+            :return: True if the address match the watchpoint address range,
+                     False otherwise.
+        """
+        if address < self.address or address > self.address + self.length:
+            return False
+        return True
+
+    def test_read(self, address):
+        """
+            Test if a read access to address trigger the watchpoint
+
+            This test if a read access to the given address can trigger the
+            watchpoint.
+
+            :param address: The address to test
+            :return: True if a read can trigger the watchpoint at the given
+                     address, False otherwise.
+        """
+        if self.enabled and self.access & self.READ:
+            return self.test(address)
+        return False
+
+    def test_write(self, address):
+        """
+            Test if a write access to address trigger the watchpoint
+
+            This test if a write access to the given address can trigger the
+            watchpoint.
+
+            :param address: The address to test
+            :return: True if a write can trigger the watchpoint at the given
+                     address, False otherwise.
+        """
+        if self.enabled and self.access & self.WRITE:
+            return self.test(address)
+        return False
 
 class RegisterSimulation:
     """
@@ -49,6 +120,7 @@ class RegisterSimulation:
         self.config = ConfigParser()
         self.config.optionxform = lambda option: option
         self.device = Device(svd, client)
+        self.client = client
         self.time = 0
 
     def read(self, file):
@@ -119,11 +191,22 @@ class RegisterSimulation:
                 field = eval('self.device.{}.{}'.format(
                     self.peripheral_name, field_name))
                 value = field.read()
+                address = field.address()
+                for wp_address in self.client.watchpoints:
+                    watchpoint = self.client.watchpoints[wp_address]
+                    if watchpoint.test_read(address):
+                        watchpoint.run(section)
                 continue
             field = eval('self.device.{}.{}'.format(
                 self.peripheral_name, option))
             value = self.config.get(section, option)
             field.write(int(value))
+
+            address = field.address()
+            for wp_address in self.client.watchpoints:
+                watchpoint = self.client.watchpoints[wp_address]
+                if watchpoint.test_write(address):
+                    watchpoint.run(section)
 
     def sleep(self, timeout=0):
         """
@@ -186,6 +269,7 @@ class RegiceClientTest(RegiceClient):
         and write.
     """
     def __init__(self):
+        super(RegiceClientTest, self).__init__()
         self.memory_save = {
             0x00001234: 0x00100003,
             0x00001238: 0x00010000,
@@ -226,3 +310,20 @@ class RegiceClientTest(RegiceClient):
             :param value: The value to write to the register
         """
         self.memory[address] = value
+
+    def watchpoint(self, address, length, access, callback, data):
+        """
+            Add and enable a watchpoint
+
+            This adds a watchpoint and enables it.
+            When the cpu stop because of the watchpoint, this executes the
+            callback.
+
+            :param address: The start address of the watchpoint
+            :param length: The length of watchpoint, in bytes
+            :param access: The type of access (R/W) that trigger the watchpoint
+            :param callback: The callback to execute when watchpoint stops cpu
+            :param data: The data to pass to callback
+        """
+        watchpoint = WatchpointTest(address, length, access, callback, data)
+        self.watchpoints[address] = watchpoint

@@ -27,13 +27,16 @@ import sys
 import unittest
 
 from libregice import Regice, RegiceClient, RegiceClientTest, RegisterSimulation
-from libregice import InvalidRegister
+from libregice import InvalidRegister, Watchpoint
 from libregice.device import Device, RegiceRegister
 from regicecommon.helpers import load_svd
 from regicecommon.pkg import open_resource
 from regicetest import open_svd_file
 from svd import SVDText
 from time import sleep
+
+def watchpoint_cb(address, unittest):
+    unittest.value += 1
 
 class TestRegiceClientTest(unittest.TestCase):
     @classmethod
@@ -333,6 +336,90 @@ class TestRegisterSimulation(unittest.TestCase):
 
         simu.update()
         self.assertEqual(simu.section, '10')
+
+class TestWatchpoint(unittest.TestCase):
+    @classmethod
+    def setUpClass(self):
+        self.svd = load_svd('BL123.svd')
+        self.client = RegiceClientTest()
+        self.dev = Device(self.svd, self.client)
+
+    def setUp(self):
+        self.value = 0
+        self.simu = RegisterSimulation(self.client, self.svd)
+        self.simu.read(open_resource(None, 'BL123_clock.sim'))
+        self.client.watchpoints = {}
+
+    def test_watchpoint(self):
+        address = self.dev.CLOCK0.OSC0.address()
+        self.client.watchpoint(address, 32, Watchpoint.RW, watchpoint_cb, self)
+        self.client.enable_watchpoint(address)
+
+        self.simu.start()
+        self.assertEqual(self.value, 1)
+
+        while self.simu.section != '5':
+            self.simu.update()
+
+        self.value = 0
+        self.simu.update()
+        self.assertEqual(self.value, 1)
+
+    def test_watchpoint_wo(self):
+        address = self.dev.CLOCK0.OSC0.address()
+        self.client.watchpoint(address, 32, Watchpoint.WRITE, watchpoint_cb, self)
+        self.client.enable_watchpoint(address)
+
+        self.simu.start()
+        self.assertEqual(self.value, 1)
+
+        while self.simu.section != '5':
+            self.simu.update()
+
+        self.simu.update()
+        self.assertGreater(self.value, 1)
+
+    def test_watchpoint_ro(self):
+        address = self.dev.CLOCK0.PLL.address()
+        self.client.watchpoint(address, 4, Watchpoint.READ, watchpoint_cb, self)
+        self.client.enable_watchpoint(address)
+
+        self.simu.start()
+        self.assertEqual(self.value, 0)
+
+        while self.simu.section != '5':
+            self.simu.update()
+
+        self.value = 0
+        self.simu.update()
+        self.assertEqual(self.value, 1)
+
+    def test_watchpoint_disable(self):
+        address = self.dev.CLOCK0.OSC0.address()
+        self.client.watchpoint(address, 32, Watchpoint.RW, watchpoint_cb, self)
+        self.client.enable_watchpoint(address)
+
+        self.simu.start()
+        self.assertEqual(self.value, 1)
+
+        self.client.disable_watchpoint(address)
+        while self.simu.section != '5':
+            self.simu.update()
+        self.assertEqual(self.value, 1)
+
+    def test_watchpoint_disable(self):
+        address = self.dev.CLOCK0.OSC0.address()
+        self.client.watchpoint(address, 32, Watchpoint.RW, watchpoint_cb, self)
+        self.client.enable_watchpoint(address)
+
+        self.simu.start()
+        self.assertEqual(self.value, 1)
+
+        self.client.delete_watchpoint(address)
+        self.assertNotIn(address, self.client.watchpoints)
+        while self.simu.section != '5':
+            self.simu.update()
+        self.assertEqual(self.value, 1)
 
 def run_tests(module):
     return unittest.main(module=module, exit=False).result
