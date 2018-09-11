@@ -24,6 +24,7 @@
 # SOFTWARE.
 
 from libregice.regice import RegiceClient, Regice, InvalidRegister
+from libregice.regice import Watchpoint
 from libregice.regiceclienttest import RegiceClientTest
 from libregice.regiceclienttest import RegisterSimulation, Simulation
 from libregice.regiceopenocd import RegiceOpenOCD

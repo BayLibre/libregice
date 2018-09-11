@@ -54,6 +54,49 @@ class InvalidPeripheral(Exception):
     def __init__(self, peripheral):
         super().__init__("Invalid peripheral " + peripheral)
 
+class Watchpoint:
+    """
+        A class to abstract watchpoint
+
+        :param address: The start address of the watchpoint
+        :param length: The length of watchpoint, in bytes
+        :param access: The type of access (R/W) that trigger the watchpoint
+        :param callback: The callback to execute when watchpoint stops cpu
+        :param data: The data to pass to callback
+    """
+    READ = 1
+    WRITE = 2
+    RW = 3
+    def __init__(self, address, length, access, callback, data):
+        self.address = address
+        self.length = length
+        self.access = access
+        self.callback = callback
+        self.data = data
+
+    def enable(self):
+        """
+            Enable the watchpoint
+        """
+        raise NotImplementedError
+
+    def disable(self):
+        """
+            Disable the watchpoint
+        """
+        raise NotImplementedError
+
+    def run(self, pc_address):
+        """
+            Execute a callback on wtchpoint hit
+
+            This executes the callback on watchpoint hit.
+            The given address is the PC address that caused the hit.
+            Note that a couple of instructions may have be ran before the cpu
+            stop, so PC address may be incorrect.
+        """
+        self.callback(pc_address, self.data)
+
 class RegiceClient:
     """
         A class to abstract access to memory and registers
@@ -61,6 +104,9 @@ class RegiceClient:
         This is a base class that must be derived to provides
         to access to device memory and is registers.
     """
+    def __init__(self):
+        self.watchpoints = {}
+
     def read(self, width, address):
         """
             Read the value of register
@@ -80,6 +126,53 @@ class RegiceClient:
             :param value: The value to write to the register
         """
         raise NotImplementedError
+
+    def watchpoint(self, address, length, access, callback, data):
+        """
+            Add and enable a watchpoint
+
+            This adds a watchpoint and enables it.
+            When the cpu stop because of the watchpoint, this executes the
+            callback.
+
+            :param address: The start address of the watchpoint
+            :param length: The length of watchpoint, in bytes
+            :param access: The type of access (R/W) that trigger the watchpoint
+            :param callback: The callback to execute when watchpoint stops cpu
+            :param data: The data to pass to callback
+        """
+        raise NotImplementedError
+
+    def enable_watchpoint(self, address):
+        """
+            Enable the watchpoint
+
+            This enables the watchpoint at the given address.
+
+            :param addrss: The address of watchpoint to enable
+        """
+        self.watchpoints[address].enable()
+
+    def disable_watchpoint(self, address):
+        """
+            Disable the watchpoint
+
+            This disables the watchpoint at the given address.
+
+            :param addrss: The address of watchpoint to disable
+        """
+        self.watchpoints[address].disable()
+
+    def delete_watchpoint(self, address):
+        """
+            Delete the watchpoint
+
+            This deletes the watchpoint at the given address.
+
+            :param addrss: The address of watchpoint to delete
+        """
+        self.watchpoints[address].disable()
+        self.watchpoints.pop(address)
 
 class Regice:
     """
