@@ -23,8 +23,54 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import threading
+import time
+
 from OpenOCD import OpenOCD
-from libregice import RegiceClient
+from libregice import RegiceClient, Watchpoint
+
+class WatchpointOpenOCD(Watchpoint):
+    """
+        OpenOCD watchpoint
+
+        This provides few methods to manage OpenOCD watchpoint.
+        :param ocd: OpenOCD object
+        :param address: The start address of the watchpoint
+        :param length: The length of watchpoint, in bytes
+        :param access: The type of access (R/W) that trigger the watchpoint
+        :param callback: The callback to execute when watchpoint stops cpu
+        :param data: The data to pass to callback
+    """
+    def __init__(self, ocd, address, length, access, callback, data):
+        super(WatchpointOpenOCD, self).__init__(address, length, access,
+                                                callback, data)
+        write = None
+        read = None
+        read_write = None
+        if access == Watchpoint.RW:
+            read_write = True
+        elif access == Watchpoint.READ:
+            read = True
+        elif access == Watchpoint.WRITE:
+            write = True
+        self.ocd = ocd
+        self.watchpoint = self.ocd.WP(address, length, read, write, read_write)
+
+    def enable(self):
+        """
+            Enable the watchpoint
+        """
+        self.ocd.Halt(1)
+        self.watchpoint.Enable()
+        self.ocd.Resume()
+
+    def disable(self):
+        """
+            Disable the watchpoint
+        """
+        self.ocd.Halt(1)
+        self.watchpoint.Disable()
+        self.ocd.Resume()
 
 class OpenOCDThreadSafe(OpenOCD):
     """
@@ -92,6 +138,51 @@ class OpenOCDThreadSafe(OpenOCD):
         """
         self.lock.release()
 
+class RegiceOpenOCDThread(threading.Thread):
+    """
+        Poll OpenOCD to get detect when the cpu stops because of a watchpoint
+        or a breakpoint.
+        :param ocd: OpenOCD object
+        :param client: OpenOCD client
+    """
+    def __init__(self, ocd, client):
+        super(RegiceOpenOCDThread, self).__init__()
+        self.ocd = ocd
+        self.client = client
+        self.quit = False
+
+    def run(self):
+        """
+            Poll the OpenOCD to detect when it stops
+
+            Poll the OpenOCD to detect when it stops to run watchpoint or
+            breakpoint callback.
+            Because there is no way to detect which watchpoint has stopped the
+            cpu, only one watchpoint is supported.
+
+            This stops to poll when quit attribute is set to True.
+        """
+        while not self.quit:
+            self.ocd.acquire()
+            lines = self.ocd.Readout()
+            if lines and self.client.watchpoint:
+                self.ocd.release()
+                pc_address = self.ocd.Reg('pc').Read()
+                for address in self.client.watchpoints:
+                    self.client.watchpoints[address].run(pc_address)
+                self.ocd.Resume()
+                self.ocd.acquire()
+            else:
+                time.sleep(0.001)
+            self.ocd.release()
+
+    def join(self, timeout=None):
+        """
+            Stop and join the thread
+        """
+        self.quit = True
+        self.ocd.Resume()
+        super(RegiceOpenOCDThread, self).join(timeout)
 
 class RegiceOpenOCD(RegiceClient):
     """
@@ -100,7 +191,9 @@ class RegiceOpenOCD(RegiceClient):
         This class provides a way to read and write memory using JTAG.
     """
     def __init__(self):
+        super(RegiceOpenOCD, self).__init__()
         self.ocd = OpenOCDThreadSafe()
+        RegiceOpenOCDThread(self.ocd, self).start()
 
     def read(self, width, address):
         """
@@ -129,3 +222,23 @@ class RegiceOpenOCD(RegiceClient):
         value = ocd_write(address, value)
         self.ocd.Resume()
         return value
+
+    def watchpoint(self, address, length, access, callback, data):
+        """
+            Add and enable a watchpoint
+
+            This adds a watchpoint and enables it.
+            When the cpu stop because of the watchpoint, this executes the
+            callback.
+
+            :param address: The start address of the watchpoint
+            :param length: The length of watchpoint, in bytes
+            :param access: The type of access (R/W) that trigger the watchpoint
+            :param callback: The callback to execute when watchpoint stops cpu
+            :param data: The data to pass to callback
+        """
+        if self.watchpoints:
+            raise IndexError("No more than one watchpoint is supported")
+        watchpoint = WatchpointOpenOCD(self.ocd, address, length, access,
+                                       callback, data)
+        self.watchpoints[address] = watchpoint
