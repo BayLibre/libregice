@@ -40,176 +40,162 @@ class RegiceObject:
         This implements many operators, to read the value of register or field,
         or update them.
     """
-    FORCE_READ = 1
-    FORCE_WRITE = 2
+    DISABLED = 0
+    READ = 1
+    WRITE = 2
 
     def __init__(self, svd, client):
         self.__dict__['svd'] = svd
         self.__dict__['client'] = client
         self.__dict__['cached_value'] = None
-        self.__dict__['cache_flags'] = self.FORCE_READ
+        self.__dict__['cache_flags'] = self.DISABLED
 
     def __int__(self):
-        return self.read_cached()
+        return self.read()
 
     def __add__(self, other):
-        return self.read_cached() + int(other)
+        return int(self) + int(other)
 
     def __sub__(self, other):
-        return self.read_cached() - int(other)
+        return int(self) - int(other)
 
     def __mul__(self, other):
-        return self.read_cached() * int(other)
+        return int(self) * int(other)
 
     def __truediv__(self, other):
-        return self.read_cached() / int(other)
+        return int(self) / int(other)
 
     def __floordiv__(self, other):
-        return self.read_cached() // int(other)
+        return int(self) // int(other)
 
     def __mod__(self, other):
-        return self.read_cached() % int(other)
+        return int(self) % int(other)
 
     def __divmod__(self, other):
-        return divmod(self.read_cached(), int(other))
+        return divmod(int(self), int(other))
 
     def __pow__(self, other):
-        return pow(self.read_cached(), int(other))
+        return pow(int(self), int(other))
 
     def __lshift__(self, other):
-        return self.read_cached() << int(other)
+        return int(self) << int(other)
 
     def __rshift__(self, other):
-        return self.read_cached() >> int(other)
+        return int(self) >> int(other)
 
     def __and__(self, other):
-        return self.read_cached() & int(other)
+        return int(self) & int(other)
 
     def __xor__(self, other):
-        return self.read_cached() ^ int(other)
+        return int(self) ^ int(other)
 
     def __or__(self, other):
-        return self.read_cached() | int(other)
+        return int(self) | int(other)
 
     def __radd__(self, other):
-        return int(other) + self.read_cached()
+        return int(other) + int(self)
 
     def __rsub__(self, other):
-        return int(other) - self.read_cached()
+        return int(other) - int(self)
 
     def __rmul__(self, other):
-        return int(other) * self.read_cached()
+        return int(other) * int(self)
 
     def __rtruediv__(self, other):
-        return int(other) / self.read_cached()
+        return int(other) / int(self)
 
     def __rmod__(self, other):
-        return int(other) % self.read_cached()
+        return int(other) % int(self)
 
     def __rdivmod__(self, other):
-        return divmod(int(other), self.read_cached())
+        return divmod(int(other), int(self))
 
     def __rpow__(self, other):
-        return pow(int(other), self.read_cached())
+        return pow(int(other), int(self))
 
     def __rlshift__(self, other):
-        return int(other) << self.read_cached()
+        return int(other) << int(self)
 
     def __rrshift__(self, other):
-        return int(other) >> self.read_cached()
+        return int(other) >> int(self)
 
     def __rand__(self, other):
-        return int(other) & self.read_cached()
+        return int(other) & int(self)
 
     def __rxor__(self, other):
-        return int(other) ^ self.read_cached()
+        return int(other) ^ int(self)
 
     def __ror__(self, other):
-        return int(other) | self.read_cached()
+        return int(other) | int(self)
 
     def __invert__(self):
-        return ~self.read_cached()
+        return ~int(self)
 
     def __lt__(self, other):
-        return self.read_cached() < int(other)
+        return int(self) < int(other)
 
     def __le__(self, other):
-        return self.read_cached() <= int(other)
+        return int(self) <= int(other)
 
     def __eq__(self, other):
-        return self.read_cached() == int(other)
+        return int(self) == int(other)
 
     def __ne__(self, other):
-        return self.read_cached() != int(other)
+        return int(self) != int(other)
 
     def __ge__(self, other):
-        return self.read_cached() > int(other)
+        return int(self) > int(other)
 
     def __gt__(self, other):
-        return self.read_cached() >= int(other)
-
-    def _new_obj(self):
-        return self.__class__(self.svd, self.client)
+        return int(self) >= int(other)
 
     def __iadd__(self, other):
-        new_obj = self._new_obj()
-        new_obj.write_cached(self.read_cached() + int(other))
-        return new_obj
+        self.write(int(self) + int(other))
+        return self
 
     def __isub__(self, other):
-        new_obj = self._new_obj()
-        new_obj.write_cached(self.read_cached() - int(other))
-        return new_obj
+        self.write(int(self) - int(other))
+        return self
 
     def __imul__(self, other):
-        new_obj = self._new_obj()
-        new_obj.write_cached(self.read_cached() * int(other))
-        return new_obj
+        self.write(int(self) * int(other))
+        return self
 
     def __itruediv__(self, other):
-        new_obj = self._new_obj()
-        new_obj.write_cached(int(self.read_cached() / int(other)))
-        return new_obj
+        self.write(int(int(self) / int(other)))
+        return self
 
     def __ifloordiv__(self, other):
-        new_obj = self._new_obj()
-        new_obj.write_cached(int(self.read_cached() // int(other)))
-        return new_obj
+        self.write(int(int(self) // int(other)))
+        return self
 
     def __imod__(self, other):
-        new_obj = self._new_obj()
-        new_obj.write_cached(self.read_cached() % int(other))
-        return new_obj
+        self.write(int(self) % int(other))
+        return self
 
     def __iand__(self, other):
-        new_obj = self._new_obj()
-        new_obj.write_cached(self.read_cached() & int(other))
-        return new_obj
+        self.write(int(self) & int(other))
+        return self
 
     def __ior__(self, other):
-        new_obj = self._new_obj()
-        new_obj.write_cached(self.read_cached() | int(other))
-        return new_obj
+        self.write(int(self) | int(other))
+        return self
 
     def __ixor__(self, other):
-        new_obj = self._new_obj()
-        new_obj.write_cached(self.read_cached() ^ int(other))
-        return new_obj
+        self.write(int(self) ^ int(other))
+        return self
 
     def __ilshift__(self, other):
-        new_obj = self._new_obj()
-        new_obj.write_cached(self.read_cached() >> int(other))
-        return new_obj
+        self.write(int(self) >> int(other))
+        return self
 
     def __irshift__(self, other):
-        new_obj = self._new_obj()
-        new_obj.write_cached(self.read_cached() << int(other))
-        return new_obj
+        self.write(int(self) << int(other))
+        return self
 
     def __ipow__(self, other):
-        new_obj = self._new_obj()
-        new_obj.write_cached(self.read_cached() ** int(other))
-        return new_obj
+        self.write(int(self) ** int(other))
+        return self
 
     def __getattr__(self, attr):
         return getattr(self.svd, attr)
@@ -227,55 +213,30 @@ class RegiceField(RegiceObject):
         super(RegiceField, self).__init__(svd, client)
         self.parent = parent
 
-    def read(self):
+    def read(self, force=False):
         """
             Read the value of field
 
+            :param force: Bypass cache policy and read data from device
             :return: The value of field
         """
         value = self.parent.read()
         mask = (1 << self.bitWidth) - 1
         return (value >> self.bitOffset) & mask
 
-    def write(self, value):
+    def write(self, value, force_read=False, force_write=False):
         """
             Write a value to field
 
             This write the value to field.
-            This forces a write to the register.
 
             :param value: The value to write
+            :param force_read: Bypass cache policy and read data from device
+            :param force_write: Bypass cache policy and write data to device
         """
         mask = ((1 << self.bitWidth) - 1) << self.bitOffset
-        cached_value = self.parent.read_cached() & ~mask
-        self.parent.write(cached_value | (value << self.bitOffset))
-
-    def read_cached(self):
-        """
-            Read the cached value of field
-
-            This returns the value cached by read().
-            If there is no value in the cache, call read().
-
-            :return: The value of field
-        """
-        value = self.parent.read_cached()
-        mask = (1 << self.bitWidth) - 1
-        return (value >> self.bitOffset) & mask
-
-    def write_cached(self, value):
-        """
-            Write the field value to register cached value
-
-            This updates the value of register cache with the value
-            of the field.
-
-            :param value: The value to write
-        """
-        cached_value = self.parent.read_cached()
-        mask = (self.bitWidth << self.bitOffset)
-        cached_value &= ~mask
-        self.parent.write_cached(cached_value | (value << self.bitOffset))
+        cached_value = self.parent.read(force_read) & ~mask
+        self.parent.write(cached_value | (value << self.bitOffset), force_write)
 
     def __str__(self):
         return "{}.{}.{}".format(self.svd.parent.parent.name,
@@ -306,55 +267,44 @@ class RegiceRegister(RegiceObject):
             field_obj = RegiceField(self, field, client)
             setattr(self, field_name, field_obj)
 
-    def read(self):
+    def read(self, force=False):
         """
             Read the value of register
 
             Read the value in the register, cache it and return it.
+            If the cache is enabled for read, this returns the cached value.
+
+            :param force: Bypass cache policy and read data from device
             :return: The value of register
         """
-        self.cached_value = self.client.read(self.svd.size, self.svd.address())
+        if force or self.cached_value is None or \
+            self.cache_flags & self.READ == 0:
+            self.cached_value = self.client.read(self.svd.size,
+                                                 self.svd.address())
         return self.cached_value
 
-    def write(self, value=None):
+    def write(self, value, force=False):
         """
             Write a value to register
 
-            This write the value (if one is given), or the value of cache to
-            register.
-            The cache is updated after the write operation.
+            This writes the value to register.
+            if the cache is enabled for write, then the value will only be
+            written to the cache.
 
             :param value: The value to write if not None
-        """
-        if value is None:
-            value = self.cached_value
-        self.client.write(self.svd.size, self.svd.address(), value)
-        self.read()
-
-    def read_cached(self):
-        """
-            Read the cached value of register
-
-            This returns the value cached by read().
-            If there is no value in the cache, call read().
-
-            :return: The value of register
-        """
-        if not self.cached_value or self.cache_flags & self.FORCE_READ:
-            self.read()
-        return self.cached_value
-
-    def write_cached(self, value):
-        """
-            Write a value to register cache
-
-            This write the value to the register cache.
-
-            :param value: The value to write
+            :param force: Bypass cache policy and write data to device
         """
         self.cached_value = value
-        if self.cache_flags & self.FORCE_WRITE:
-            self.write()
+        if force or self.cache_flags & self.WRITE == 0:
+            self.client.write(self.svd.size, self.svd.address(), value)
+
+    def flush(self):
+        """
+            Flush the cache
+
+            This forces to write cached value to register.
+        """
+        self.client.write(self.svd.size, self.svd.address(), self.cached_value)
 
     def __str__(self):
         return "{}.{}".format(self.svd.parent.name, self.name)

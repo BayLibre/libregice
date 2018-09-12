@@ -194,9 +194,22 @@ class TestRegiceObject(unittest.TestCase):
         reg.write(0)
         self.assertEqual(self.memory[address], 0)
 
-        reg += 1
-        reg.write()
+        reg.write(1)
         self.assertEqual(self.memory[address], 1)
+
+    def test_register_flush(self):
+        reg = self.dev.TEST1.TESTA
+        address = reg.address()
+
+        reg.write(0)
+        self.assertEqual(self.memory[address], 0)
+
+        reg.cache_flags = reg.WRITE
+        reg += 1
+        self.assertEqual(self.memory[address], 0)
+        reg.flush()
+        self.assertEqual(self.memory[address], 1)
+        reg.cache_flags = reg.DISABLED
 
     def test_register_numeric_op(self):
         reg = self.dev.TEST1.TESTA
