@@ -220,7 +220,7 @@ class RegiceField(RegiceObject):
             :param force: Bypass cache policy and read data from device
             :return: The value of field
         """
-        value = self.parent.read()
+        value = self.parent.read(force)
         mask = (1 << self.bitWidth) - 1
         return (value >> self.bitOffset) & mask
 
