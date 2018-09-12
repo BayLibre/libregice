@@ -301,6 +301,21 @@ class RegiceClientTest(RegiceClient):
             self.memory[address] = 0
         return self.memory[address]
 
+    def read_list(self, addresses):
+        """
+            Read the value of addresses listed in dict
+
+            :param dict: A dictionnary with the width as key, and the list of
+                         address to read for that width
+            :return: a dictionnary of value read, and with the address used as
+                     key
+        """
+        values = {}
+        for width in addresses:
+            for address in addresses[width]:
+                values[address] = self.read(width, address)
+        return values
+
     def write(self, width, address, value):
         """
             Write a value to the register

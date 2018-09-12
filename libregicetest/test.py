@@ -58,6 +58,11 @@ class TestRegiceClientTest(unittest.TestCase):
         self.client.write(32, address, value)
         self.assertEqual(value, self.memory[address])
 
+    def test_read_list(self):
+        addresses = {32: self.memory.keys()}
+        values = self.client.read_list(addresses)
+        self.assertEqual(values, self.memory)
+
 class TestRegice(unittest.TestCase):
     @classmethod
     def setUpClass(self):
