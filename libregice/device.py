@@ -332,6 +332,40 @@ class RegicePeripheral:
     def __getattr__(self, attr):
         return getattr(self.svd, attr)
 
+    def cache_configure(self, flags):
+        """
+            Configure caching for peripheral's registers
+
+            This configures caching for each registers in the peripheral.
+
+            :param flags: cache flags, could be: RegiceObject.DISABLED,
+                          RegiceObject.READ, RegiceObject.WRITE
+        """
+        for register_name in self.svd.registers:
+            register = getattr(self, register_name)
+            register.cache_flags = flags
+
+    def cache_prefetch(self):
+        """
+            Prefetch the content of registers to cache
+
+            This reads the value of each registers and updates the cache.
+            This is useful to update all registers at once, and use the cached
+            values to perform many read operations on registers without
+            performance hit.
+        """
+        addresses = {}
+        for register_name in self.svd.registers:
+            register = self.svd.registers[register_name]
+            if not register.size in addresses:
+                addresses[register.size] = []
+            addresses[register.size].append(register.address())
+        values = self.client.read_list(addresses)
+
+        for register_name in self.svd.registers:
+            register = getattr(self, register_name)
+            register.cached_value = values[register.address()]
+
 class Device:
     """
         A class that represents a device

@@ -289,6 +289,48 @@ class TestRegiceObject(unittest.TestCase):
         reg.A3.write(0)
         self.assertEqual(self.memory[address], 0)
 
+class RegicePeripheralTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(self):
+        file = open_svd_file('test.svd')
+        svd = SVDText(file.read())
+        svd.parse()
+        self.client = RegiceClientTest()
+        self.dev = Device(svd, self.client)
+        self.memory = self.client.memory
+
+    def setUp(self):
+        self.client.memory_restore()
+        self.dev.TEST1.TESTA.cached_value = None
+
+    def test_cache_prefetch(self):
+        self.assertEqual(self.dev.TEST1.TESTA.cached_value, None)
+        values = self.dev.TEST1.cache_prefetch()
+        self.assertNotEqual(self.dev.TEST1.TESTA.cached_value, None)
+
+        address = self.dev.TEST1.TESTA.address()
+        self.memory[address] = 32
+        values = self.dev.TEST1.cache_prefetch()
+        self.assertEqual(self.dev.TEST1.TESTA.cached_value, 32)
+
+    def test_cache_configure(self):
+        peripheral = self.dev.TEST1
+        reg = peripheral.TESTA
+        address = reg.address()
+
+        peripheral.cache_configure(reg.READ)
+        value = reg.read()
+        self.assertEqual(value, self.memory[address])
+
+        self.memory[address] += 1
+        value = reg.read()
+        self.assertNotEqual(value, self.memory[address])
+
+        peripheral.cache_configure(reg.DISABLED)
+        value = reg.read()
+        self.assertEqual(value, self.memory[address])
+
+
 class TestRegisterSimulation(unittest.TestCase):
     @classmethod
     def setUpClass(self):
