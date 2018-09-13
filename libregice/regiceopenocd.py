@@ -166,7 +166,7 @@ class RegiceOpenOCDThread(threading.Thread):
             self.ocd.acquire()
             lines = self.ocd.Readout()
             self.ocd.release()
-            if lines and self.client.watchpoint:
+            if lines and self.client.watchpoints:
                 pc_address = self.ocd.Reg('pc').Read()
                 for address in self.client.watchpoints:
                     self.client.watchpoints[address].run(pc_address)
