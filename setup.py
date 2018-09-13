@@ -71,6 +71,8 @@ setup(
     entry_points={
         'regice': [
                 'run_tests = libregicetest.test:run_tests',
+                'init_args = libregice.plugin:init_args',
+                'process_args = libregice.plugin:process_args',
         ]
     },
 )
