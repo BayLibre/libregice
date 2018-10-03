@@ -34,7 +34,7 @@ def init_args(parser):
         Add arguments required to init libregice.
     """
     parser.add_argument(
-        "--svd",
+        "--svd", required=True,
         help="SVD file that contains registers definition"
     )
 
