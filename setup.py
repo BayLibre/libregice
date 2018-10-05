@@ -46,6 +46,12 @@ setup(
         'git+https://github.com/BayLibre/OpenOCD.git#egg=OpenOCD',
         'git+https://github.com/BayLibre/RegiceSVD.git#egg=RegiceSVD',
     ],
+    entry_points={
+        'regice': [
+                'init_args = libregice.plugin:init_args',
+                'process_args = libregice.plugin:process_args',
+        ]
+    },
 )
 
 setup(
@@ -71,8 +77,6 @@ setup(
     entry_points={
         'regice': [
                 'run_tests = libregicetest.test:run_tests',
-                'init_args = libregice.plugin:init_args',
-                'process_args = libregice.plugin:process_args',
         ]
     },
 )
